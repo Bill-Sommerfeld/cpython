@@ -182,6 +182,9 @@ lltrace_resume_frame(_PyInterpreterFrame *frame)
 }
 #endif
 
+static void dtrace_function_entry(_PyInterpreterFrame *);
+static void dtrace_function_return(_PyInterpreterFrame *);
+
 static void monitor_raise(PyThreadState *tstate,
                  _PyInterpreterFrame *frame,
                  _Py_CODEUNIT *instr);
@@ -716,6 +719,7 @@ _PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int 
         if (_Py_EnterRecursivePy(tstate)) {
             goto exit_unwind;
         }
+        DTRACE_FUNCTION_ENTRY();
         /* Because this avoids the RESUME,
          * we need to update instrumentation */
         _Py_Instrument(frame->f_code, tstate->interp);
@@ -742,6 +746,7 @@ start_frame:
         goto exit_unwind;
     }
 
+    DTRACE_FUNCTION_ENTRY();
 resume_frame:
     SET_LOCALS_FROM_FRAME();
 
@@ -957,6 +962,7 @@ exception_unwind:
                 }
                 assert(STACK_LEVEL() == 0);
                 _PyFrame_SetStackPointer(frame, stack_pointer);
+                DTRACE_FUNCTION_EXIT();
                 monitor_unwind(tstate, frame, next_instr-1);
                 goto exit_unwind;
             }
@@ -2779,6 +2785,36 @@ PyUnstable_Eval_RequestCodeExtraIndex(freefunc free)
     new_index = interp->co_extra_user_count++;
     interp->co_extra_freefuncs[new_index] = free;
     return new_index;
+}
+
+static void
+dtrace_function_entry(_PyInterpreterFrame *frame)
+{
+    const char *filename;
+    const char *funcname;
+    int lineno;
+
+    PyCodeObject *code = frame->f_code;
+    filename = PyUnicode_AsUTF8(code->co_filename);
+    funcname = PyUnicode_AsUTF8(code->co_name);
+    lineno = PyUnstable_InterpreterFrame_GetLine(frame),
+
+    PyDTrace_FUNCTION_ENTRY(filename, funcname, lineno);
+}
+
+static void
+dtrace_function_return(_PyInterpreterFrame *frame)
+{
+    const char *filename;
+    const char *funcname;
+    int lineno;
+
+    PyCodeObject *code = frame->f_code;
+    filename = PyUnicode_AsUTF8(code->co_filename);
+    funcname = PyUnicode_AsUTF8(code->co_name);
+    lineno = PyUnstable_InterpreterFrame_GetLine(frame),
+
+    PyDTrace_FUNCTION_RETURN(filename, funcname, lineno);
 }
 
 /* Implement Py_EnterRecursiveCall() and Py_LeaveRecursiveCall() as functions
