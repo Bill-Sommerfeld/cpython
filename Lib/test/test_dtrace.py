@@ -126,7 +126,7 @@ class TraceTests:
     def test_verify_call_opcodes(self):
         """Ensure our call stack test hits all function call opcodes"""
 
-        opcodes = set(["CALL_FUNCTION", "CALL_FUNCTION_EX", "CALL_FUNCTION_KW"])
+        opcodes = set(["CALL", "CALL_FUNCTION_EX"])
 
         with open(abspath("call_stack.py")) as f:
             code_string = f.read()
