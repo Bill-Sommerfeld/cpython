@@ -183,6 +183,8 @@ class CheckDtraceProbes(unittest.TestCase):
                 print(f"readelf version: {readelf_major_version}.{readelf_minor_version}")
         else:
             raise unittest.SkipTest("CPython must be configured with the --with-dtrace option.")
+        # this method of checking probes does not work for original dtrace
+        SystemTapBackend().assert_usable()
 
 
     @staticmethod
